@@ -12,13 +12,13 @@ function _init()
 		miny=0,
 		angle=0,
 		vel=1,
-		limit=2.5,
+		limit=2,
 		sp=17,
 		osp=18,
 		asp=19,
 		right=true,
 		down=nil,
-		shoot_wait=0.25,
+		shoot_wait=0.1,
 		hbx=0,
 		hby=0,
 		hbsx=8,
@@ -40,11 +40,15 @@ function rnd_stars()
 		add(stars,star)
 	end
 end
+
+	
 -->8
 -- update functions
 function _update()
 	update_player()
 	update_bullets()
+	generate_enemies()
+	update_enemies()
 end
 
 function update_player()
@@ -79,6 +83,7 @@ function _draw()
 --	spr(ship.sp,ship.x,ship.y)
 	draw_stars()
 	draw_player()
+	draw_enemies()
 	draw_bullets()
 end
 
@@ -239,24 +244,68 @@ end
 -->8
 -- enemies
 
-function make_enemy(x,y,kind)
+function make_enemy(x,y,sprite)
 	local enemy={
 		x=x,
 		y=y,
 		sx=x,
 		sy=y,
-		sp=34,
-		dx=(-1),
-		dy=0,
+		sp=sprite,
+		dx=0,
+		dy=rnd(1),
 		hbx=0,--hitbox things
 		hby=0,
 		hbsx=8,
 		hbsy=8,
 		hp=1,
-		shp=1,
-		kind=kind
+		shp=1
 		}
 		add(enemies, enemy)
+end
+
+function generate_enemies(chance)
+	local side=rnd(1) -- if side is 1, spawn on right. else spawn on left
+	local rand=flr(rnd(35))
+	local randy=rnd(25)+60
+	if rand==24 then
+		if side>=0.5 then
+			make_enemy(129,randy,3)
+		else
+			make_enemy(0,randy,2)
+		end
+	end
+end
+
+function update_enemies()
+	foreach(enemies, function(enemy)
+		enemy.x+=enemy.dx
+		enemy.y+=enemy.dy
+		local dx
+		if enemy.sp==3 then
+			dx=(-1)
+		else
+			dx=1
+		end
+		enemy.dx=dx
+		if collide(ship, enemy) then
+			ship.hp+=(-1)
+		end
+		if enemy.hp<0 then
+			del(enemies, enemy)
+		end
+		
+		foreach(bullets, function(bullet)
+		 if collide(bullet, enemy) then
+		 	enemy.hp+=(-1)
+		 end
+		end)
+	end)
+end
+
+function draw_enemies()
+	foreach(enemies, function(enemy)
+		spr(enemy.sp,enemy.x,enemy.y)
+	end)
 end
 __gfx__
 00000000000bb0005000000000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
