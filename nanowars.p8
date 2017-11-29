@@ -15,10 +15,12 @@ function _init()
 		limit=2.5,
 		sp=17,
 		osp=18,
-		asp=19,
-		
+		asp=19
 	}
 	enemies={}
+	bullets={}
+	holes={}
+
 end
 -->8
 -- update functions
@@ -53,7 +55,7 @@ end
 function _draw()
 	cls()
 	spr(ship.sp,ship.x,ship.y)
-	
+
 end
 
 function anim(o,sf,nf,sp,fl)
@@ -480,4 +482,3 @@ __music__
 00 41424344
 00 41424344
 00 41424344
-
