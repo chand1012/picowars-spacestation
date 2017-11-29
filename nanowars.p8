@@ -23,12 +23,22 @@ function _init()
 		hby=0,
 		hbsx=8,
 		hbsy=8,
-		hp=10
+		hp=10,
+		lives=3,
 	}
 	enemies={}
 	bullets={}
 	holes={}
+	stars={}
 	shoot_time=0
+	rnd_stars()
+end
+
+function rnd_stars()
+	for i=1,100 do
+		local star={x=rnd(127),y=rnd(127)}
+		add(stars,star)
+	end
 end
 -->8
 -- update functions
@@ -67,7 +77,15 @@ end
 function _draw()
 	cls()
 --	spr(ship.sp,ship.x,ship.y)
+	draw_stars()
 	draw_player()
+	draw_bullets()
+end
+
+function draw_stars()
+ foreach(stars, function(star)
+ 	pset(star.x,star.y)
+ end)
 end
 
 function anim(o,sf,nf,sp,fl)
