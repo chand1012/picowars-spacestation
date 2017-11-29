@@ -15,20 +15,30 @@ function _init()
 		limit=2.5,
 		sp=17,
 		osp=18,
-		asp=19
+		asp=19,
+		right=true,
+		down=nil,
+		shoot_wait=0.25,
+		hbx=0,
+		hby=0,
+		hbsx=8,
+		hbsy=8,
+		hp=10
 	}
 	enemies={}
 	bullets={}
 	holes={}
-
+	shoot_time=0
 end
 -->8
 -- update functions
 function _update()
 	update_player()
+	update_bullets()
 end
 
 function update_player()
+	shoot()
 	if btn(0) and ship.dx>(-ship.limit) then
 		ship.dx+=ship.vel*(-1)
 	elseif btn(1) and ship.dx<ship.limit then
@@ -50,12 +60,14 @@ function update_player()
 	ship.x+=ship.dx
 	ship.y+=ship.dy
 end
+
+
 -->8
 -- draw functions
 function _draw()
 	cls()
-	spr(ship.sp,ship.x,ship.y)
-
+--	spr(ship.sp,ship.x,ship.y)
+	draw_player()
 end
 
 function anim(o,sf,nf,sp,fl)
@@ -72,8 +84,42 @@ end
 
 function draw_player() -- make this so that you use all 3 sprites
 	local angle=0
-	local dx=ship.dx
-	local dy=ship.dy -- you need to have it flip the sprites as needed
+	if btn(1) then
+		ship.right=true
+	elseif btn(0) then
+		ship.right=false
+	end
+	if btn(3) then
+		ship.down=true
+	elseif btn(2) then
+		ship.down=false
+	elseif (btn(1) or btn(0)) and not(btn(2) or btn(3)) then
+		ship.down=nil
+	end
+	
+	if btn(2) and btn(1) then
+		angle=45
+	elseif btn(1) and btn(3) then
+		angle=135
+	elseif btn(0) and btn(3) then
+		angle=225
+	elseif btn(0) and btn(2) then
+		angle=315
+	end
+	
+	if ship.down==nil and angle==0 then
+		spr(ship.osp,ship.x,ship.y,1,1,ship.right,false)
+	elseif angle==0 then
+		spr(ship.sp,ship.x,ship.y,1,1,false,ship.down)
+	elseif angle==45 then
+		spr(ship.asp,ship.x,ship.y,1,1,true,false)
+	elseif angle==135 then
+		spr(ship.asp,ship.x,ship.y,1,1,true,true)
+	elseif angle==225 then
+		spr(ship.asp,ship.x,ship.y,1,1,false,true)
+	elseif angle==315 then
+		spr(ship.asp,ship.x,ship.y,1,1,false,false)
+	end
 end
 -->8
 --misc functions
@@ -93,6 +139,14 @@ function collide(obj, other)
   	return false
   end
 end
+
+function invert(input)
+	if invert then
+		return false
+	else
+		return true
+	end
+end
 -->8
 --bullets
 
@@ -100,7 +154,7 @@ function shoot() -- this needs heavy reworking
 	local dx=0
 	local dy=0
 	if btnp(5) and time()>=shoot_time then
-		shoot_time=time()+shoot_wait
+		shoot_time=time()+ship.shoot_wait
 		if btn(0) then
 			dx=-5
 			last=-5
@@ -116,14 +170,14 @@ function shoot() -- this needs heavy reworking
 				dx=last
 			end
 		end
-		if btn(3) and p1.isgrounded==false then
+		if btn(3) then
 			dy=5
 		elseif btn(2) then
 			dy=-5
 		else
 			dy=0
 		end
-		make_bullet(p1.x,p1.y,dx,dy)
+		make_bullet(ship.x,ship.y,dx,dy)
 	end
 end
 
@@ -135,7 +189,7 @@ function make_bullet(x,y,dx,dy)
 	hby=3,
 	hbsx=4,
 	hbsy=4,
-	sp=0,
+	sp=4,
 	dx=dx,
 	dy=dy
  }
@@ -159,7 +213,7 @@ function update_bullets()
 		if fget(h,0) or fget(h,7) then
 			del(bullets,bullet)
 		end
-		if bullet.x>p1.x+100 or bullet.x<p1.x-100 then
+		if bullet.x>ship.x+100 or bullet.x<ship.x-100 then
 			del(bullets, bullet)
 		end
 	end)
@@ -190,8 +244,8 @@ __gfx__
 00000000000bb0005000000000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000550009550000000000559000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700005115009665550000555669000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000005665009866615bb5166689000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000005665009866615bb5166689000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000005665009866615bb5166689000880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000005665009866615bb5166689000880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700056666509665550000555669000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000056886509550000000000559000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000599999955000000000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -482,3 +536,4 @@ __music__
 00 41424344
 00 41424344
 00 41424344
+
