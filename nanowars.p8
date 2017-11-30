@@ -41,7 +41,7 @@ function _init()
 	bullets={}
 	holes={}
 	stars={}
-	emitters={}
+	booms={}
 	shoot_time=0
 	rnd_stars()
 end
@@ -110,6 +110,7 @@ function _draw()
 		draw_enemies()
 		draw_bullets()
 	end
+	draw_booms()
 	print(score,100,119,3)
 	draw_lives()
 end
@@ -126,6 +127,7 @@ function draw_mini_station()
 	circfill(56,5,5,0)
 end
 
+-- object, starting frame, number of frames, animation speed, flip
 function anim(o,sf,nf,sp,fl)
   if(not o.a_ct) o.a_ct=0
   if(not o.a_st) o.a_st=0
@@ -211,6 +213,25 @@ function collide(obj, other)
   end
 end
 
+function make_boom(x,y,t)
+ local b={
+ 	x=x,
+ 	y=y,
+ 	t=t+time(),
+ 	sp=5
+ }
+ add(booms,b)
+end
+
+function draw_booms()
+	foreach(booms, function(boom)
+		if boom.t<=time() then
+			del(booms,boom)
+		end
+		anim(boom,boom.sp,3,10,false)
+	end)
+end
+
 
 -->8
 --bullets
@@ -234,9 +255,10 @@ function make_bullet(x,y,dx,dy)
 	hbsy=4,
 	sp=4,
 	dx=dx,
-	dy=dy
+	dy=dy,
+	t=time()+4,
  }
- sfx(6,1)
+ --sfx(6,1)
 	add(bullets, thing)
 end
 
@@ -256,9 +278,9 @@ function update_bullets()
 		if fget(h,0) or fget(h,7) then
 			del(bullets,bullet)
 		end
-		if bullet.x>ship.x+100 or bullet.x<ship.x-100 then
-			del(bullets, bullet)
-		end
+		if bullet.t<=time() then
+			del(bullets,bullet)
+		end 
 	end)
 end
 -->8
@@ -311,6 +333,7 @@ function update_enemies()
 			ship.hp+=(-1)
 		end
 		if enemy.hp<0 then
+			make_boom(enemy.x,enemy.y,1)
 			del(enemies,enemy)
 			score+=50
 		end
@@ -320,6 +343,7 @@ function update_enemies()
 		foreach(bullets, function(bullet)
 		 if collide(bullet, enemy) then
 		 	enemy.hp+=(-1)
+		 	del(bullets,bullet)
 		 end
 		end)
 	end)
