@@ -39,6 +39,7 @@ function _init()
 		lives=3,
 		bdx=5,
 		bdy=0,
+		kills=0
 	}
 	enemies={}
 	bullets={}
@@ -46,6 +47,7 @@ function _init()
 	stars={}
 	booms={}
 	shield={}
+	sbreak=false
 	shoot_time=0
 	rnd_stars()
 	make_shield()
@@ -307,7 +309,7 @@ function make_enemy(x,y,sprite)
 		hbsx=8,
 		hbsy=8,
 		hp=1,
-		age=0 -- in frames
+		age=time()+10
 		}
 		add(enemies, enemy)
 end
@@ -315,7 +317,7 @@ end
 function generate_enemies(chance)
 	local side=rnd(1) -- if side is 1, spawn on right. else spawn on left
 	local rand=flr(rnd(50))
-	local randy=rnd(25)+65
+	local randy=rnd(25)+67
 	if rand==24 then
 		if side>=0.5 then
 			make_enemy(129,randy,3)
@@ -343,8 +345,9 @@ function update_enemies()
 			make_boom(enemy.x,enemy.y,1)
 			del(enemies,enemy)
 			score+=50
+			ship.kills+=1
 		end
-		if enemy.age>=(10*30) then
+		if enemy.age<=time() then
 			del(enemies,enemy)
 		end
 		foreach(bullets, function(bullet)
@@ -366,7 +369,7 @@ end
 
 function make_shield()
 	for i=1,32 do
-		local x=(i*4)-1
+		local x=(i*4)-4
 		local y=64
 		local s={x=x,y=y,hbx=0,hby=0,hbsx=8,hbsy=8,hole=false,t=0}
 		add(shield,s)
@@ -375,29 +378,30 @@ end
 
 function update_shield()
 	foreach(shield, function(s)
-		local rand=flr(rnd(100))
-		if shield.hole then
-			if shield.t<=time() then
-				shield.hole=false
+		if ship.kills>3 and sbreak==false then --get this to work
+			local rand=flr(rnd(25))
+			local orand=rand+6
+			for i=rand,orand do
+				del(shield,shield[i])
 			end
-		else
-			if rand==25 then
-				shield.hole=true
-				shield.t=time()+5
-			end
+			sbreak=true
 		end
-		if collide(ship,s) and shield.hole==false then
+		if collide(ship,s) then
 			ship.dy=0
 			ship.y=s.y+8
 		end
+		foreach(bullets, function(bullet)
+			if collide(bullet,s) then
+				del(bullets,bullet)
+			end
+		end)
 	end)
 end
 
 function draw_shield()
 	foreach(shield, function(s)
-		spr(24,s.x,s.y)
-		if shield.hole then
-			circfill(shield.x,shield.y,10,0)
+		if not shield.hole then
+			spr(24,s.x,s.y)
 		end
 	end)
 end
