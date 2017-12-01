@@ -1,3 +1,4 @@
 # Pico-8 Files
 ignore/
 *.bin/
+*.bat
