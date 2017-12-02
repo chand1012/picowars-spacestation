@@ -11,7 +11,7 @@ __lua__
 -- 4 = game over
 -- 5 = win screen
 function _init()
-	stage=3 -- has to do with game states
+	stage=0 -- has to do with game states
 	score=tonum(stat(6))
 	debug=false
 	if score==nil then
@@ -20,6 +20,8 @@ function _init()
 	ship={ -- add hitbox
 		x=72,
 		y=94,
+		sx=72,
+		sy=94,
 		dx=0,
 		dy=0,
 		minx=0,
@@ -52,7 +54,6 @@ function _init()
 		dy=5,
 		w=185,
 		h=60,
-		t=0.5
 	}
 	smug={
 		x=57,
@@ -63,21 +64,21 @@ function _init()
 		hbsy=16
 	}
 	bmug={
-		sx=73,
-		sy=12,
-		sw=50,
-		sh=15,
-		dx=7,
-		dy=5,
-		w=185,
-		h=60,
+		sx=106,
+		sy=1,
+		sw=13,
+		sh=12,
+		x=45,
+		y=10,
+		w=36,
+		h=36,
 		hp=25,
 		hbx=0,
 		hby=0,
 		hbsx=32,
-		hysy=32
+		hbsy=32,
+		dead=false
 	}
-	mugholes={}
 	enemies={}
 	bullets={}
 	holes={}
@@ -86,14 +87,18 @@ function _init()
 	shield={}
 	brcheck=true
 	shoot_time=0
-	shieldscore=300
+	shieldscore=1500
 	rnd_stars()
 	make_shield()
 	rnd_shield=flr(rnd(39))+1
 	init_hyperspace(200)
+	init_bigboom()
 	hypertime=time()+10
 	gameover_time=0
 	start_time=time()+1
+	boom_time=9999
+	boom_sound=false
+	win_time=nil
 end
 
 function rnd_stars()
@@ -110,41 +115,41 @@ function init_hyperspace(n)
 	stary={} -- create the x co-ordinates table for each star
 	oldx = 0 -- used to store x co-ordinates before they get animated
 	oldy = 0 -- used to store x co-ordinates before they get animated
-	
+
 	x_vol = 0 -- these two variables are used to accelerate the randomly created points for each star
 	y_vol = 0
-	
-	
+
+
 	a=0.0001 -- this itty bitty number basiclly reduces the large random x,y positions to near zero and then slowly brings them up to the full number
-	
+
 	for i=1,stars do -- generate the two co-orindate tables used to store each stars x and y
 		add(starx,((rnd(256)-128))) -- 256 - 128 gives us a resolution between positive 128 and negative 128 i.e. the size of our screen
 		add(stary,((rnd(256)-128)))
 	end
-	
+
 	star_array_x = {} -- empty tables to populate with the final rendered pixel position
 	star_array_y = {}
 end
 
 function init_bigboom()
-	boom_center = 16 -- set the center of the screen, the starting point for each star
+	boom_center = 64 -- set the center of the screen, the starting point for each star
 	boom_stars = 100 -- number of stars to be generated
 	boomx={} -- create the x co-ordinates table for each star
 	boomy={} -- create the x co-ordinates table for each star
 	boom_oldx = 0 -- used to store x co-ordinates before they get animated
 	boom_oldy = 0 -- used to store x co-ordinates before they get animated
-	
+
 	boom_x_vol = 0 -- these two variables are used to accelerate the randomly created points for each star
 	boom_y_vol = 0
-	
-	
+
+
 	boom_a=0.0001 -- this itty bitty number basiclly reduces the large random x,y positions to near zero and then slowly brings them up to the full number
-	
+
 	for i=1,boom_stars do -- generate the two co-orindate tables used to store each stars x and y
 		add(boomx,((rnd(256)-128))) -- 256 - 128 gives us a resolution between positive 128 and negative 128 i.e. the size of our screen
 		add(boomy,((rnd(256)-128)))
 	end
-	
+
 	boom_array_x = {} -- empty tables to populate with the final rendered pixel position
 	boom_array_y = {}
 end
@@ -197,9 +202,11 @@ function update_player()
 	elseif ship.dy<(ship.miny) and not(btn(2) or btn(3)) then
 		ship.dy+=ship.vel*0.5
 	end
-	if ship.hp<0 then
+	if ship.hp<=0 then
 		ship.lives+=(-1)
 		ship.hp=25
+		ship.x=ship.sx
+		ship.y=ship.sy
 	end
 	if ship.x<=-8 then -- these are so the player doesn't dissapear
 		ship.x=135
@@ -214,6 +221,8 @@ function update_player()
 	if collide(ship,smug) then
 		stage=2
 		hypertime=time()+10
+		ship.x=ship.sx
+		ship.y=ship.sy
 	end
 	if ship.lives<=0 then
 		gameover_time=time()+3
@@ -240,11 +249,31 @@ function update_gameover()
 	if gameover_time<=time() and any_btn() then
 		stage=0
 		score=0
+		ship.hp=25
 		ship.lives=3
 		start_time=time()+1
 	end
 end
 
+function update_station()
+	if bmug.hp<=0 then
+		bmug.dead=true
+		if not boom_sound then
+			sfx(4,1)
+			boom_time=time()+5
+			boom_sound=true
+		end
+	end
+	if bmug.dead and boom_time<=time() then
+		stage=5
+	end
+end
+
+function update_win()
+	if win_time<=time() and any_btn() then
+		stage=0
+	end
+end
 -->8
 -- draw functions
 function _draw()
@@ -326,7 +355,7 @@ function draw_player() -- make this so that you use all 3 sprites
 		ship.down=nil
 		ship.bdy=0
 	end
-	
+
 	if btn(2) and btn(1) then
 		angle=45
 	elseif btn(1) and btn(3) then
@@ -336,7 +365,7 @@ function draw_player() -- make this so that you use all 3 sprites
 	elseif btn(0) and btn(2) then
 		angle=315
 	end
-	
+
 	if ship.down==nil and angle==0 then
 		spr(ship.osp,ship.x,ship.y,1,1,ship.right,false)
 	elseif angle==0 then
@@ -355,7 +384,7 @@ end
 function draw_hud()
 	local count=0
 	for i=1,ship.lives do
-		spr(21,15+count,117)
+		spr(17,15+count,117)
 		count+=10
 	end
 	print(score,100,119,3)
@@ -384,6 +413,85 @@ end
 
 function hyperspace() -- called by _draw
 	for i=1, stars do -- start the star loop
+
+		x_vol+=rnd(3*a) -- here's the magic for the star acceleration, an iterated tiny number that controls the speed of the stars
+		y_vol+=rnd(3*a)
+
+		oldx = starx[i] -- storing the original position of each star
+		oldy = stary[i]
+
+		star_array_x[i] = center + (starx[i] * x_vol) /2 -- putting all the calculations together to write each stars x and y
+		star_array_y[i] = center + (stary[i] * y_vol) /2
+
+		-- do the 2nd star wave when each a point off screen
+		if(star_array_x[i]>128 or star_array_y[i]>128 or star_array_x[i] < 0 or star_array_y[i] < 0) then
+			x_vol+=rnd(1*a)
+			y_vol+=rnd(1*a)
+			starx[i] = rnd(256)-128
+			stary[i] = rnd(256)-128
+			starx[i]=oldx
+			stary[i]=oldy
+			star_array_x[i] = center + (starx[i] * x_vol) / 15
+			star_array_y[i] = center + (stary[i] * y_vol) / 15
+		end
+
+		pset(star_array_x[i], star_array_y[i] , 7) -- write the pixels!
+	end
+end
+
+function draw_gameover()
+	local text="game over"
+	local tscore="score: "..score
+	print(text,hcenter(text),vcenter(55),8)
+	print(tscore,hcenter(tscore),vcenter(64),3)
+	if gameover_time<=time() then
+		local btntxt="press any button to continue"
+		print(btntxt,hcenter(btntxt),vcenter(75),11)
+	end
+end
+
+function draw_station()
+	if not bmug.dead then
+		sspr(bmug.sx,bmug.sy,bmug.sw,bmug.sh,bmug.x,bmug.y,bmug.w,bmug.h)
+		print("hp: "..bmug.hp,bmug.x+2,bmug.y-6,8)
+	else
+		gen_boom()
+		if debug then
+			print(boom_time-time(),5,5,11)
+		end
+	end
+end
+
+function gen_boom() -- called by _draw
+	for i=1, boom_stars do -- start the star loop
+
+		boom_x_vol+=rnd(3*a) -- here's the magic for the star acceleration, an iterated tiny number that controls the speed of the stars
+		boom_y_vol+=rnd(3*a)
+
+		boom_oldx = boomx[i] -- storing the original position of each star
+		boom_oldy = boomy[i]
+
+		boom_array_x[i] = boom_center + (boomx[i] * boom_x_vol) /2 -- putting all the calculations together to write each stars x and y
+		boom_array_y[i] = boom_center + (boomy[i] * boom_y_vol) /2
+
+		-- do the 2nd star wave when each a point off screen
+		if(boom_array_x[i]>128 or boom_array_y[i]>128 or boom_array_x[i] < 0 or boom_array_y[i] < 0) then
+			boom_x_vol+=rnd(1*a)
+			boom_y_vol+=rnd(1*a)
+			boomx[i] = rnd(256)-128
+			boomy[i] = rnd(256)-128
+			boomx[i]=boom_oldx
+			boomy[i]=boom_oldy
+			boom_array_x[i] = boom_center + (boomx[i] * boom_x_vol) / 15
+			boom_array_y[i] = boom_center + (boomy[i] * boom_y_vol) / 15
+		end
+		--local rnd_color=rnd_col({8,9})
+		pset(boom_array_x[i], boom_array_y[i]-32,9) -- write the pixels!
+	end
+end
+
+function gen_stars() -- called by _draw
+	for i=1, stars do -- start the star loop
 		
 		x_vol+=rnd(3*a) -- here's the magic for the star acceleration, an iterated tiny number that controls the speed of the stars
 		y_vol+=rnd(3*a)
@@ -410,53 +518,20 @@ function hyperspace() -- called by _draw
 	end	
 end
 
-function draw_gameover()
-	local text="game over"
-	local tscore="score: "..score
-	print(text,hcenter(text),vcenter(55),8)
-	print(tscore,hcenter(tscore),vcenter(64),3)
-	if gameover_time<=time() then
-		local btntxt="press any button to continue"
+function draw_win()
+	local txt1="you win!"
+	local txt2="you have defeated the"
+	local txt3="evil mug company!"
+	local txtscore="score: "..score
+	local btntxt="press any button to restart"
+	print(txt1,hcenter(txt1),vcenter(15),9)
+	print(txt2,hcenter(txt2),vcenter(25),12)
+	print(txt3,hcenter(txt3),vcenter(31),12)
+	print(txtscore,hcenter(txtscore),vcenter(64),3)
+	if win_time<=time() then
 		print(btntxt,hcenter(btntxt),vcenter(75),11)
 	end
 end
-
-function draw_station()
-	sspr(bmug.sx,bmug.sy,bmug.sw,bmug.sh,bmug.dx,bmug.dy,bmug.w,bmug.h)
-	foreach(mugholes, function(hole)
-		pset(hole.x,hole.y,0)
-	end)
-end
-
-function gen_stars() -- called by _draw
-	for i=1, boom_stars do -- start the star loop
-		
-		boom_x_vol+=rnd(3*a) -- here's the magic for the star acceleration, an iterated tiny number that controls the speed of the stars
-		boom_y_vol+=rnd(3*a)
-		
-		boom_oldx = boomx[i] -- storing the original position of each star
-		boom_oldy = boomy[i]
-		
-		boom_array_x[i] = boom_center + (boomx[i] * boom_x_vol) /2 -- putting all the calculations together to write each stars x and y
-		boom_array_y[i] = boom_center + (boomy[i] * boom_y_vol) /2
-
-		-- do the 2nd star wave when each a point off screen
-		if(boom_array_x[i]>128 or boom_array_y[i]>128 or boom_array_x[i] < 0 or boom_array_y[i] < 0) then
-			boom_x_vol+=rnd(1*a)
-			boom_y_vol+=rnd(1*a)
-			boomx[i] = rnd(256)-128
-			boomy[i] = rnd(256)-128
-			boomx[i]=boom_oldx 
-			boomy[i]=boom_oldy 
-			boom_array_x[i] = boom_center + (boomx[i] * boom_x_vol) / 15
-			boom_array_y[i] = boom_center + (boomy[i] * boom_y_vol) / 15
-		end
-		local rnd_color=rnd_col({8,9})
-		pset(boom_array_x[i], boom_array_y[i] , rnd_color) -- write the pixels!
-	end	
-end
-
-
 -->8
 --misc functions
 function destroy_all(things)
@@ -504,18 +579,6 @@ function any_btn()
  if (btn(5)) return true
 end
 
-function rnd_col(col_table)
-	local rnd_col=flr(rnd(#col_table))
-	return col_table[rnd_col]
-end
-
-function make_hole()
-	local x=flr(rnd(32))+16
-	local y=flr(rnd(32))
-	local cols={0,1,2,5}
-	local h={x=x,y=y,col=rnd_col(cols)}
-	add(bmug_holes,h)
-end
 -->8
 -- bullets
 
@@ -556,19 +619,13 @@ function update_bullets()
 	foreach(bullets, function(bullet)
 		bullet.x+=bullet.dx
 		bullet.y+=bullet.dy
-		local xoffset=0
-		if bullet.dx>0 then xoffset=7 end
-		local h=mget((bullet.x+xoffset)/8,(bullet.y+7)/8)
-		if fget(h,0) or fget(h,7) then
-			del(bullets,bullet)
-		end
 		if bullet.t<=time() then
 			del(bullets,bullet)
 		end
 		if collide(bmug,bullet) then
 			del(bullets,bullet)
 			bmug.hp+=(-1)
-			make_hole()
+			sfx(1,0)
 		end
 	end)
 end
@@ -583,6 +640,7 @@ function make_enemy(x,y,sprite)
 	else
 		dx=rnd(1)+1
 	end
+	local rhp=flr(rnd(2))
 	local enemy={
 		x=x,
 		y=y,
@@ -595,7 +653,7 @@ function make_enemy(x,y,sprite)
 		hby=0,
 		hbsx=8,
 		hbsy=8,
-		hp=1,
+		hp=rhp,
 		age=time()+10,
 		f=f
 		}
@@ -672,7 +730,7 @@ function update_shield()
 		end)
 	end)
 	if score>=shieldscore and brcheck then --get this to work
-		for i=1,6 do
+		for i=1,10 do
 			local s=shield[rnd_shield]
 			del(shield,s)
 		end
@@ -987,7 +1045,7 @@ __sfx__
 0101000000000000000000000000000001e6501e6501e6501f6501f6501f650206502065020650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00020000000003665036650336502f6502c6502a6502865025630226301f6301d6301b6201a61019610186101860018600204001c4001a4001840016400154000000000000000000000000000000000000000000
 00010000000000000000000000001f6501f6501f6501f6501f6501f6501f6501f6500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000600003d6703d6703d670396503765034650306502b64026640226401e6301b63019620176201561012610116100e6000c6000a600086000660004600026000160001600016000160001600016000160000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
