@@ -10,6 +10,7 @@ __lua__
 -- 3 = space station stage
 -- 4 = game over
 -- 5 = win screen
+-- 6 = instructions
 function _init()
 	stage=3 -- has to do with game states
 	score=tonum(stat(6))
@@ -87,7 +88,8 @@ function _init()
 	shield={}
 	brcheck=true
 	shoot_time=0
-	shieldscore=1500
+	killenemies=flr(rnd(15))+20
+	shieldscore=killenemies*50
 	rnd_stars()
 	make_shield()
 	rnd_shield=flr(rnd(39))+1
@@ -181,6 +183,8 @@ function _update()
 	elseif stage==5 then
 		move_stars()
 		
+	elseif stage==6 then
+		move_stars()	
 	end
 end
 
@@ -539,6 +543,19 @@ function draw_win()
 	if win_time<time() then
 		print(btntxt,hcenter(btntxt),vcenter(75),11)	
 	end
+end
+
+function draw_info() -- maybe make this get the username of the player on kongregate
+	local ennum=tostr(shieldscore/50)
+	local txt1="1) kill "..ennum.." enemies"
+	local txt2="2) travel through the shield"
+	local txt3="3) destroy the mug."
+	local btntxt="press any button to continue"
+	print(txt1,hcenter(txt1),vcenter(20),11)
+	print(txt2,hcenter(txt2),vcenter(26),11)
+	print(txt3,hcenter(txt3),vcenter(32),11)
+	if 	
+	print(btntxt,hcenter(btntxt),vcenter(64),11)
 end
 -->8
 --misc functions
