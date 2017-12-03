@@ -11,9 +11,9 @@ __lua__
 -- 4 = game over
 -- 5 = win screen
 function _init()
-	stage=0 -- has to do with game states
+	stage=3 -- has to do with game states
 	score=tonum(stat(6))
-	debug=false
+	debug=true
 	if score==nil then
 		score=0
 	end
@@ -98,7 +98,7 @@ function _init()
 	start_time=time()+1
 	boom_time=9999
 	boom_sound=false
-	win_time=nil
+	win_time=0
 end
 
 function rnd_stars()
@@ -178,7 +178,9 @@ function _update()
 	elseif stage==4 then
 		move_stars()
 		update_gameover()
-	else
+	elseif stage==5 then
+		move_stars()
+		
 	end
 end
 
@@ -261,6 +263,7 @@ function update_station()
 		if not boom_sound then
 			sfx(4,1)
 			boom_time=time()+5
+			win_time=time()+7
 			boom_sound=true
 		end
 	end
@@ -269,9 +272,14 @@ function update_station()
 	end
 end
 
-function update_win()
-	if win_time<=time() and any_btn() then
+function update_win() -- get this to work
+	local abtn=(btn(4) or btn(5))
+	if win_time<time() and abtn then
 		stage=0
+	end
+	if debug then
+		print(tostr(win_time<time()),5,5,11)
+		print(tostr(abtn),5,15,11)
 	end
 end
 -->8
@@ -523,13 +531,13 @@ function draw_win()
 	local txt2="you have defeated the"
 	local txt3="evil mug company!"
 	local txtscore="score: "..score
-	local btntxt="press any button to restart"
+	local btntxt="press Ž/z or —/x to restart"
 	print(txt1,hcenter(txt1),vcenter(15),9)
 	print(txt2,hcenter(txt2),vcenter(25),12)
 	print(txt3,hcenter(txt3),vcenter(31),12)
 	print(txtscore,hcenter(txtscore),vcenter(64),3)
-	if win_time<=time() then
-		print(btntxt,hcenter(btntxt),vcenter(75),11)
+	if win_time<time() then
+		print(btntxt,hcenter(btntxt),vcenter(75),11)	
 	end
 end
 -->8
@@ -623,9 +631,12 @@ function update_bullets()
 			del(bullets,bullet)
 		end
 		if collide(bmug,bullet) then
-			del(bullets,bullet)
-			bmug.hp+=(-1)
-			sfx(1,0)
+			if not boom_sound then
+				del(bullets,bullet)
+				bmug.hp+=(-1)
+				score+=10
+				sfx(1,0)
+			end
 		end
 	end)
 end
