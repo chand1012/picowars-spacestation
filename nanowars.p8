@@ -12,9 +12,9 @@ __lua__
 -- 5 = win screen
 -- 6 = instructions
 function _init()
-	stage=3 -- has to do with game states
+	stage=0 -- has to do with game states
 	score=tonum(stat(6))
-	debug=true
+	debug=false
 	if score==nil then
 		score=0
 	end
@@ -99,6 +99,7 @@ function _init()
 	gameover_time=0
 	start_time=time()+1
 	boom_time=9999
+	prestage_time=9999
 	boom_sound=false
 	win_time=0
 end
@@ -164,7 +165,7 @@ function _update()
 	elseif stage==1 then
 		update_player()
 		update_bullets()
-		generate_enemies()
+		generate_enemies(spawnrate(score))
 		update_enemies()
 		update_shield()
 	elseif stage==2 then
@@ -174,7 +175,7 @@ function _update()
 	elseif stage==3 then
 		update_player()
 		update_bullets()
-		generate_enemies()
+		generate_enemies(spawnrate(score))
 		update_enemies()
 		update_station()
 	elseif stage==4 then
@@ -182,9 +183,10 @@ function _update()
 		update_gameover()
 	elseif stage==5 then
 		move_stars()
-		
+		update_win()
 	elseif stage==6 then
 		move_stars()	
+		update_prestage()
 	end
 end
 
@@ -224,7 +226,7 @@ function update_player()
 	end
 	ship.x+=ship.dx
 	ship.y+=ship.dy
-	if collide(ship,smug) then
+	if collide(ship,smug) and stage==1 then
 		stage=2
 		hypertime=time()+10
 		ship.x=ship.sx
@@ -238,7 +240,8 @@ end
 
 function update_menu()
 	if any_btn() and start_time<=time() then
-		stage=1
+		stage=6
+		prestage_time=time()+2
 	end
 end
 
@@ -286,6 +289,12 @@ function update_win() -- get this to work
 		print(tostr(abtn),5,15,11)
 	end
 end
+
+function update_prestage()
+	if prestage_time<=time() and any_btn() then
+		stage=1
+	end
+end
 -->8
 -- draw functions
 function _draw()
@@ -319,6 +328,9 @@ function _draw()
 	elseif stage==5 then
 		draw_stars()
 		draw_win()
+	elseif stage==6 then
+		draw_stars()
+		draw_info()
 	end
 	draw_booms()
 end
@@ -553,8 +565,7 @@ function draw_info() -- maybe make this get the username of the player on kongre
 	local btntxt="press any button to continue"
 	print(txt1,hcenter(txt1),vcenter(20),11)
 	print(txt2,hcenter(txt2),vcenter(26),11)
-	print(txt3,hcenter(txt3),vcenter(32),11)
-	if 	
+	print(txt3,hcenter(txt3),vcenter(32),11)	
 	print(btntxt,hcenter(btntxt),vcenter(64),11)
 end
 -->8
@@ -596,12 +607,12 @@ function draw_booms()
 end
 
 function any_btn()
-	if (btn(0)) return true
- if (btn(1)) return true
- if (btn(2)) return true
- if (btn(3)) return true
- if (btn(4)) return true
- if (btn(5)) return true
+	if (btnp(0)) return true
+ if (btnp(1)) return true
+ if (btnp(2)) return true
+ if (btnp(3)) return true
+ if (btnp(4)) return true
+ if (btnp(5)) return true
 end
 
 -->8
@@ -610,14 +621,17 @@ end
 function shoot() -- this needs heavy reworking
 	local dx=ship.bdx
 	local dy=ship.bdy
-	if btnp(5) and time()>=shoot_time then
+	if (btnp(5) or btnp(4)) and time()>=shoot_time then
 		shoot_time=time()+ship.shoot_wait
 		make_bullet(ship.x,ship.y,dx,dy)
 		sfx(0,0)
 	end
 end
 
-function make_bullet(x,y,dx,dy)
+function make_bullet(x,y,dx,dy,harm)
+	if harm==nil then
+		harm=false
+	end
 	local thing={
 	x=x,
 	y=y,
@@ -629,6 +643,7 @@ function make_bullet(x,y,dx,dy)
 	dx=dx,
 	dy=dy,
 	t=time()+4,
+	harm=harm
  }
  --sfx(6,1)
 	add(bullets, thing)
@@ -655,6 +670,11 @@ function update_bullets()
 				sfx(1,0)
 			end
 		end
+		if collide(ship,bullet) and bullet.harm then
+			sfx(1,0)
+			ship.hp+=(-2)
+			del(bullets,bullet)
+		end
 	end)
 end
 -->8
@@ -663,7 +683,7 @@ end
 function make_enemy(x,y,sprite)
 	local dx
 	local dy=rnd(1)
-	if sprite==3 then
+	if sprite==3 or sprite==8 then
 		dx=(-rnd(1)-1)
 	else
 		dx=rnd(1)+1
@@ -688,15 +708,24 @@ function make_enemy(x,y,sprite)
 		add(enemies, enemy)
 end
 
-function generate_enemies()
+function generate_enemies(n)
 	local side=rnd(1) -- if side is 1, spawn on right. else spawn on left
-	local rand=flr(rnd(50))
+	local kind=flr(rnd(3))
+	local rand=rnd(n)
 	local randy=rnd(25)+50
-	if rand==24 then
+	if rand<=2 then
 		if side>=0.5 then
-			make_enemy(129,randy,3)
+			if kind==2 then
+				make_enemy(129,randy,8)
+			else
+				make_enemy(129,randy,3)
+			end
 		else
-			make_enemy(0,randy,2)
+			if kind==2 then
+				make_enemy(0,randy,9)
+			else
+				make_enemy(0,randy,2)
+			end
 		end
 	end
 end
@@ -715,11 +744,24 @@ function update_enemies()
 			ship.kills+=1
 			sfx(2,1)
 		end
+		if enemy.sp==8 then
+			local rand=rnd(30)
+			if rand>=29 then
+				sfx(5,2)
+				make_bullet(enemy.x,enemy.y,-5,0,true)
+			end
+		elseif enemy.sp==9 then
+			local rand=rnd(30)
+			if rand>=29 then
+				sfx(5,2)
+				make_bullet(enemy.x,enemy.y,5,0,true)
+			end
+		end
 		if enemy.age<=time() then
 			del(enemies,enemy)
 		end
 		foreach(bullets, function(bullet)
-		 if collide(bullet, enemy) then
+		 if collide(bullet, enemy) and (not bullet.harm) then
 		 	enemy.hp+=(-1)
 		 	del(bullets,bullet)
 		 	sfx(1,0)
@@ -732,6 +774,19 @@ function draw_enemies()
 	foreach(enemies, function(enemy)
 		spr(enemy.sp,enemy.x,enemy.y)
 	end)
+end
+
+function spawnrate(s)
+	local rate
+	local r=s/100
+	if s==0 then
+		rate=75
+	elseif r<2 and s>200 then
+		rate=2
+	else
+		rate=75*0.96^r
+	end
+	return rate
 end
 -->8
 -- shield
@@ -774,14 +829,14 @@ function draw_shield()
 	end)
 end
 __gfx__
-00000000000880005000000000000005000000000880000088000008008888806666666600000000000000000000000000000000000000000000000000000000
-00000000000550009550000000000559000000000808898080988898889988908822222600000000000000000000000000000000006666666666000000000000
-00700700005115009665550000555669000000008888888089900880088888886666662600000000000000000000000000000000009999999996600000000000
-0007700000566500986661588516668900088000898998900889808089889888000006c600000000000000000000000000000000008889999996660000000000
-0007700000566500986661588516668900088000088990800889908088898890000006c600000000000000000000000000000000008889999996066000000000
-00700700056666509665550000555669000000000988888809980880898888806666662600000000000000000000000000000000008988988886006000000000
-00000000056886509550000000000559000000008980809089888998089898908822222600000000000000000000000000000000008988888986006000000000
-00000000599999955000000000000005000000008880088080088980080088806666666600000000000000000000000000000000009999998886006000000000
+00000000000880005000000000000005000000000880000088000008008888806666666666666666000000000000000000000000000000000000000000000000
+00000000000550009550000000000559000000000808898080988898889988908822222662222288000000000000000000000000006666666666000000000000
+00700700005115009665550000555669000000008888888089900880088888886666662662666666000000000000000000000000009999999996600000000000
+0007700000566500986661588516668900088000898998900889808089889888000006c66c600000000000000000000000000000008889999996660000000000
+0007700000566500986661588516668900088000088990800889908088898890000006c66c600000000000000000000000000000008889999996066000000000
+00700700056666509665550000555669000000000988888809980880898888806666662662666666000000000000000000000000008988988886006000000000
+00000000056886509550000000000559000000008980809089888998089898908822222662222288000000000000000000000000008988888986006000000000
+00000000599999955000000000000005000000008880088080088980080088806666666666666666000000000000000000000000009999998886006000000000
 00000000006666000066660006080600000000003333333300000000000000001111111100000000000000000000000000000000009999999986006000000000
 00000000086b06800860b6006b606660000000003bbbbbb300000000000000001111111100000000000000000000000000000000009999998886006000000000
 000000006660b666666b066606b6b6b6000000003bbbbbb300000000000000001111111100000000000000000000000000000000009988898886066000000000
@@ -1074,7 +1129,7 @@ __sfx__
 00020000000003665036650336502f6502c6502a6502865025630226301f6301d6301b6201a61019610186101860018600204001c4001a4001840016400154000000000000000000000000000000000000000000
 00010000000000000000000000001f6501f6501f6501f6501f6501f6501f6501f6500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000600003d6703d6703d670396503765034650306502b64026640226401e6301b63019620176201561012610116100e6000c6000a600086000660004600026000160001600016000160001600016000160000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00030000000000000000000000000000007000080000a0000d0000f00010050170501b050180501b0500000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
