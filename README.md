@@ -7,7 +7,6 @@ This is a de-make of the 1983 classic Atari game, [Return of the Jedi: Death Sta
 - music
 - Kongregate API Integration
 - more sound effects
-- publish the game in different places.
 
 ## Other Ideas
 I plan to make a Pico-8 game mini series called PicoWars, the next game will use identical sprites as a top-down shootemup.

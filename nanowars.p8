@@ -12,6 +12,7 @@ __lua__
 -- 5 = win screen
 -- 6 = instructions
 function _init()
+	statsapictr = 0 -- for js
 	stage=0 -- has to do with game states
 	score=tonum(stat(6))
 	debug=false
@@ -828,6 +829,31 @@ function draw_shield()
 		end
 	end)
 end
+-->8
+-- js api
+
+-- set values in ports
+--[[
+function sethighscore()
+  poke(0x5f82, 0) -- 0 = post score
+  poke(0x5f83, score % 256) -- low byte
+  poke(0x5f84, flr(score / 256)) -- high byte
+  updatestatsapi()
+end
+
+-- tell js we have new stuff in the ports it has to post asap
+
+function updatestatsapi()
+    statsapictr += 1    
+    poke(0x5f80,statsapictr % 256)
+    poke(0x5f81,flr(statsapictr / 256))
+
+        -- delay to make sure js has enough time
+    for i=0,10 do
+        spr(243,0,0) -- show a sprite to show it's doing something, maybe a spinner
+        flip() -- flip screen, i.e. wait 1/30th of a second
+    end
+end]]--
 __gfx__
 00000000000880005000000000000005000000000880000088000008008888806666666666666666000000000000000000000000000000000000000000000000
 00000000000550009550000000000559000000000808898080988898889988908822222662222288000000000000000000000000006666666666000000000000

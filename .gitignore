@@ -2,3 +2,5 @@
 ignore/
 *.bin/
 *.bat
+# may not need to ignore this later
+gpio.js
