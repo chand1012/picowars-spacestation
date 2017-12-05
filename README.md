@@ -4,10 +4,8 @@ This is a de-make of the 1983 classic Atari game, [Return of the Jedi: Death Sta
 ## What needs done
 - ~~Enemy sprites~~ Add more enemy diversity
 - Better acceleration
-- ~~health~~
-- ~~the giant shield thing~~
-- space station
-- get the basic game working
+- music
+- Kongregate API Integration
 - more sound effects
 - publish the game in different places.
 
